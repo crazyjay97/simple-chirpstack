@@ -1,4 +1,4 @@
-[package]
+	[package]
 name = "chirpstack"
 description = "ChirpStack is an open-source LoRaWAN(TM) Network Server"
 repository = "https://github.com/chirpstack/chirpstack"

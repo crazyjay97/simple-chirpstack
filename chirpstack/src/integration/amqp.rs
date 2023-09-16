@@ -55,12 +55,13 @@ impl<'a> Integration<'a> {
 
         Ok(i)
     }
-
+    #[cfg(target_os = "linux")]
     async fn connect(&self) -> Result<()> {
         info!("(Re)connecting to AMQP broker");
 
         let mut conn_w = CONNECTION.write().await;
         let mut chan_w = CHANNEL.write().await;
+
 
         let options = ConnectionProperties::default()
             // Use tokio executor and reactor.
@@ -68,6 +69,23 @@ impl<'a> Integration<'a> {
             .with_executor(tokio_executor_trait::Tokio::current())
             .with_reactor(tokio_reactor_trait::Tokio);
 
+
+
+        let conn = Connection::connect(&self.url, options).await?;
+        let chan = conn.create_channel().await?;
+
+        *conn_w = Some(conn);
+        *chan_w = Some(chan);
+
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn connect(&self) -> Result<()> {
+        info!("(Re)connecting to AMQP broker");
+        let mut conn_w = CONNECTION.write().await;
+        let mut chan_w = CHANNEL.write().await;
+        let options = ConnectionProperties::default();
         let conn = Connection::connect(&self.url, options).await?;
         let chan = conn.create_channel().await?;
 
@@ -275,7 +293,7 @@ pub mod test {
                     .with_executor(tokio_executor_trait::Tokio::current())
                     .with_reactor(tokio_reactor_trait::Tokio),
             )
-            .await
+                .await
             {
                 Ok(v) => {
                     break v;
@@ -304,8 +322,8 @@ pub mod test {
             QueueBindOptions::default(),
             FieldTable::default(),
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
         let mut consumer = chan
             .basic_consume(
